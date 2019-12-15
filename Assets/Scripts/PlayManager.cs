@@ -331,11 +331,12 @@ public class PlayManager : MonoBehaviour
         countDown.timertext.SetText = "You Scored " + scores.FinalScore;
         UpdatePlayerScore();
         skipBtn.gameObject.SetActive(false);
-        grid.Move();
-        while(!grid.IsDown)
+        //grid.Move();
+        /*while(!grid.IsDown)
         {
             yield return null;
-        }
+        }*/
+        yield return new WaitForSeconds(scoreTransitionWait);
         skipCalculation = false;
         if (CheckFullBoard())
         {
@@ -344,6 +345,8 @@ public class PlayManager : MonoBehaviour
         }
         else
         {
+            countDown.Set(120);
+            countDown.UpdateTime = false;
             turn = Turn.Opponent;
             StartCoroutine(OpponentTurn());
         }
@@ -373,6 +376,9 @@ public class PlayManager : MonoBehaviour
             }
         }
 
+
+        yield return new WaitForSeconds(aiTurnTime / 2);
+        countDown.UpdateTime = true;
         //Determine how many letters AI is going to use
         int placedLetters = Random.Range(Mathf.Clamp(3, 0, usableLetters), usableLetters);
         if (buildGrid.GetComponent<WordManager>().LettersLeft <= 10)
@@ -397,6 +403,7 @@ public class PlayManager : MonoBehaviour
         }
 
         //Calculate the letter scores
+        List<Tile> selectedTiles = new List<Tile>();
         int letterScores = 0;
         List<LetterTile> usedTiles = new List<LetterTile>();
         if (usedLetters.Count > 0)
@@ -407,18 +414,18 @@ public class PlayManager : MonoBehaviour
                 aiInfo.letters[usedLetters[i]] = '!';
                 List<LetterTile> letterTiles = buildGrid.GetAllUnsetTilesOfType(letter);
                 int selectedTile = Random.Range(0, letterTiles.Count);
-                    letterTiles[selectedTile].Cell.GetComponent<Tile>().Set = true;
-                    usedTiles.Add(letterTiles[selectedTile]);
+                selectedTiles.Add(letterTiles[selectedTile].Cell.GetComponent<Tile>());
+                //letterTiles[selectedTile].Cell.GetComponent<Tile>().Set = true;
+                usedTiles.Add(letterTiles[selectedTile]);
 
-                    if (letterTiles[selectedTile].isDouble)
-                        letterScores += 2;
-                    else
-                        letterScores++;
+                if (letterTiles[selectedTile].isDouble)
+                    letterScores += 2;
+                else
+                    letterScores++;
             }
         }
-
         //Waiting just so it doesn't happen instantly, this could be done anywhere. I decided here
-        yield return new WaitForSeconds(aiTurnTime);
+        yield return new WaitForSeconds(aiTurnTime/2);
 
         //Calculate word scores
         WordManager wordManager = PlayManager.GetManager.GetComponent<WordManager>();
@@ -454,11 +461,29 @@ public class PlayManager : MonoBehaviour
 
         //Gather up the scores and end the turn
         aiInfo.score += wordScores + letterScores;
+        countDown.UpdateTime = false;
         countDown.timertext.SetText = "Opponent scored " + (letterScores + wordScores);
         UpdateOpponentScore();
         yield return new WaitForSeconds(scoreTransitionWait);
 
+        //countDown.UpdateTime = true;
         //If the board is full end the game otherwise give the turn back to player
+
+        if (grid.IsReady)
+        {
+            countDown.Stop();
+            grid.Move();
+
+            while (!grid.IsDown)
+            {
+                yield return null;
+            }
+            foreach(Tile tile in selectedTiles)
+            {
+                tile.Set = true;
+            }
+        }
+
         if (CheckFullBoard())
         {
             turn = Turn.Finished;
@@ -466,7 +491,10 @@ public class PlayManager : MonoBehaviour
         }
         else
         {
+
             countDown.timertext.SetText = "Your turn";
+
+
             turn = Turn.Player;
             startBtn.gameObject.SetActive(true);
         }
@@ -601,6 +629,15 @@ public class PlayManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if(turn != Turn.Player)
+        {
+            if (countDown.Alarm)
+            {
+                grid.Move();
+                countDown.UpdateTime = true;
+            }
+        }
+
         if (turn == Turn.Player)
         {
             //Starts your round and hides the start button

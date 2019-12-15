@@ -14,6 +14,8 @@ public class Count_down : MonoBehaviour
     float timeLeft;
 
     public bool IsActive { get => active; }
+    bool updateTime = true;
+    public bool UpdateTime { get => updateTime; set => updateTime = value; }
 
     [Header("Blink Warning Settings:")]
     public float blinkStartTime = 10f;
@@ -53,6 +55,7 @@ public class Count_down : MonoBehaviour
         }
     }
 
+
     private void Update()
     {
         if(active)
@@ -66,7 +69,8 @@ public class Count_down : MonoBehaviour
             {
                 timertext.StartBlinking(blinkColor, blinkInterval);
             }
-            timertext.SetText = TimeStamp(timeLeft);
+            if(updateTime)
+                timertext.SetText = TimeStamp(timeLeft);
         }
     }
 
